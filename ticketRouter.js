@@ -4,10 +4,18 @@ const bodyParser = require('body-parser');
 const tickets = require('./ticket.json');
 
 router.use(bodyParser.json());
+router.use(express.static('pages'));
+//Default
+router.get('/', (req, res) =>{
+
+
+    res.send(tickets);
+});
 
 // Endpoint to get all tickets
 router.get('/rest/list', (req, res) => {
     res.send(tickets);
+
 });
 
 // Endpoint to get a single ticket by id

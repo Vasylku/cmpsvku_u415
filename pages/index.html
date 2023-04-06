@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>My Node.js Page</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .button-container {
+            display: flex;
+            flex-direction: row;
+            margin-top: 20px;
+        }
+        .button-container button {
+            margin: 0 10px;
+            padding: 10px 20px;
+            background-color: #008CBA;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .button-container button:hover {
+            background-color: #004C8C;
+        }
+    </style>
+</head>
+<body>
+<h1>Welcome to my VKu_uService page!</h1>
+<p>Here is some content.</p>
+<div class="button-container">
+    <button onclick="location.href='http://localhost:3000/listTickets.html'">View All Tickets</button>
+    <button onclick="location.href='http://localhost:3000/index.html'">Welcome</button>
+</div>
+</body>
+</html>
