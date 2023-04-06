@@ -5,6 +5,7 @@ const tickets = require('./ticket.json');
 
 router.use(bodyParser.json());
 router.use(express.static('pages'));
+router.use(express.static('./'));
 //Default
 router.get('/', (req, res) =>{
 
