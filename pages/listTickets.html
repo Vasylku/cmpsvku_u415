@@ -104,6 +104,49 @@
   display:flex ;
   flex-direction: row;
 }
+button-delete{
+
+  display: inline-block;
+  padding: 10px 20px;
+  background-color: #8c0500;
+  color: #fff;
+  text-align: center;
+  font-size: 16px;
+  border-radius: 5px;
+  text-decoration: none;
+  margin: 10px;
+
+}
+    button-delete:hover{
+   background-color: #c01905;
+ }
+    button-update{
+
+      display: inline-block;
+      padding: 10px 20px;
+      background-color: #936a01;
+      color: #fff;
+      text-align: center;
+      font-size: 16px;
+      border-radius: 5px;
+      text-decoration: none;
+      margin: 10px;
+
+    }
+    button-update:hover{
+      background-color: #bb8703;
+    }
+    view-button{
+      display: inline-block;
+      padding: 10px 20px;
+      background-color: #a8a8a8;
+      color: #fff;
+      text-align: center;
+      font-size: 16px;
+      border-radius: 5px;
+      text-decoration: none;
+      margin: 10px;
+    }
 
   </style>
   <script src= "./scripts.js"></script>
@@ -157,11 +200,14 @@
       <input type="text" id="created_at" name="created_at">
 
       <input type="submit" value="Submit">
+
     </form>
   </div>
   <div class = "b-1">
-    <a id="back-button" href="http://localhost:3000/listTickets.html" class="button" style="display:none;" onclick="hideTicketForm()">Back to All Tickets</a>
+   <a id="back-button" href="https://kuservice.onrender.com/listTickets.html" class="button" style="display:none;" onclick="hideTicketForm()">Back to All Tickets</a>
     <a href="https://kuservice.onrender.com/index.html" class="button">Back to Home</a>
   </div>
 </body>
 </html>
+<!--
+//http://localhost:3000-->

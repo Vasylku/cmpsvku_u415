@@ -50,7 +50,59 @@ router.get('/rest/ticket/:id', (req, res) => {
         res.send(ticket);
     }
 });
+//Endpoint to update ticket
+router.put('/rest/ticket/:id', (req, res) => {
+const id = req.params.id;
+    const {
+        type,
+        subject,
+        description,
+        priority,
+        status,
+        creator,
+        created_at,
+    } = req.body;
 
+    const ticketIndex = tickets.findIndex((t) => t.id === id);
+
+    if (ticketIndex === -1) {
+        res.status(404).send('Ticket not found');
+    } else if (
+        !type ||
+        !subject ||
+        !description ||
+        !priority ||
+        !status ||
+        !creator ||
+        !created_at
+    ) {
+        res.status(400).send('Incomplete ticket info');
+    } else {
+        const updatedTicket = {
+            id,
+            type,
+            subject,
+            description,
+            priority,
+            status,
+            creator,
+            created_at,
+        };
+
+        tickets[ticketIndex] = updatedTicket;
+
+        // Write the updated tickets data to the file
+        fs.writeFile(ticketfile, JSON.stringify(tickets), 'utf8', (err) => {
+            if (err) {
+                console.error(err);
+                res.status(500).send('Error writing to file');
+            } else {
+                res.send(updatedTicket);
+            }
+        });
+    }
+
+})
 // Endpoint to create a new ticket
 router.post('/rest/ticket', (req, res) => {
     const {
@@ -91,7 +143,27 @@ router.post('/rest/ticket', (req, res) => {
         });
     }
 });
+// Endpoint to delete a ticket by id
+router.delete('/rest/ticket/:id', (req, res) => {
+    const id = req.params.id;
+    const ticketIndex = tickets.findIndex((t) => t.id === id);
 
+    if (ticketIndex === -1) {
+        res.status(404).send('Ticket not found');
+    } else {
+        tickets.splice(ticketIndex, 1);
+
+        // Write the updated tickets data to the file
+        fs.writeFile(ticketfile, JSON.stringify(tickets), 'utf8', (err) => {
+            if (err) {
+                console.error(err);
+                res.status(500).send('Error writing to file');
+            } else {
+                res.send('Ticket deleted');
+            }
+        });
+    }
+});
 // Error handling middleware for bad requests
 router.use((err, req, res, next) => {
     if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
