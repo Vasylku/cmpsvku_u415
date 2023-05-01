@@ -1,11 +1,18 @@
 const express = require('express');
+const { MongoClient } = require("mongodb");
 const router = express.Router();
 const bodyParser = require('body-parser');
+const xmlparser = require('express-xml-bodyparser');
+const request = require('request');
 const fs = require('fs');
-
+const { parseString } = require('xml2js');
+const js2xmlparser = require('js2xmlparser');
+const xml2js = require("xml2js");
+router.use(xmlparser());
 // Read the tickets data from the file on startup
 const ticketfile = './ticket.json';
 let tickets = [];
+
 function getLastTicketId() {
     if (tickets.length > 0) {
         const lastTicket = tickets[tickets.length - 1];
@@ -14,6 +21,26 @@ function getLastTicketId() {
     }
 
     return 0;
+}
+class TicketAdapter {
+    constructor(data) {
+        this.data = data;
+    }
+    toJson() {
+        if (typeof this.data === 'string') {
+            return JSON.parse(this.data);
+        } else if (typeof this.data === 'object') {
+            return this.data;
+        }
+    }
+
+    toXml() {
+        if (typeof this.data === 'object') {
+            return js2xmlparser.parse('ticket', this.data);
+        } else if (typeof this.data === 'string') {
+            return this.data;
+        }
+    }
 }
 fs.readFile(ticketfile, 'utf8', (err, data) => {
     if (err) {
@@ -29,17 +56,21 @@ router.use(express.static('pages'));
 router.use(express.static('./'));
 
 // Default endpoint
-router.get('/', (req, res) => {
+router.get('/', async(req, res) => {
     res.send(tickets);
 });
 
 // Endpoint to get all tickets
 router.get('/rest/list', (req, res) => {
-    res.send(tickets);
+   res.send(tickets);
+
+
 });
+
 
 // Endpoint to get a single ticket by id
 router.get('/rest/ticket/:id', (req, res) => {
+   // const client = new MongoClient(uri);
     const id = req.params.id;
 
     const ticket = tickets.find((t) => t.id === id);
@@ -50,7 +81,22 @@ router.get('/rest/ticket/:id', (req, res) => {
         res.send(ticket);
     }
 });
-//Endpoint to update ticket
+router.get('/rest/xml/ticket/:id', async (req, res) => {
+    const id = req.params.id;
+
+    try {
+        const response = await fetch(`https://kuservice.onrender.com/rest/ticket/${id}`);
+        const ticketJson = await response.json();
+
+     //   const ticketXml = js2xmlparser.parse('ticket', ticketJson);
+        const ticketXml = new TicketAdapter(ticketJson).toXml();
+        res.set('Content-Type', 'application/xml');
+        res.send(ticketXml);
+    } catch (error) {
+        res.status(500).send('Error retrieving ticket');
+    }
+});
+//Endpoint to update ticket json
 router.put('/rest/ticket/:id', (req, res) => {
 const id = req.params.id;
     const {
@@ -102,7 +148,39 @@ const id = req.params.id;
         });
     }
 
-})
+})// Endpoint to add a single ticket sent as an XML document
+router.put('/rest/xml/ticket/:id', (req, res) => {
+    const id = req.params.id;
+    const xmlData = req.body;
+    let obj = {};
+    for(let a in xmlData.ticket){
+
+        obj[a] = xmlData.ticket[a][0];
+    }
+    // Convert XML data to JSON
+   const jsonData = JSON.stringify(obj);
+
+    // Make PUT request using request library
+    const options = {
+        method: 'PUT',
+        url: `http://localhost:3000/rest/ticket/${id}`,
+        headers: { 'Content-Type': 'application/json' },
+        body: jsonData,
+    };
+
+    request(options, (error, response, body) => {
+        if (error) {
+            res.status(500).send('Error updating ticket');
+        } else {
+            // Convert response body back to XML format
+           // const xmlResponse = js2xmlparser.parse('ticket', body);
+            const xmlResponse = new TicketAdapter(body).toXml();
+            res.set('Content-Type', 'application/xml');
+            res.send(xmlResponse);
+        }
+    });
+});
+
 // Endpoint to create a new ticket
 router.post('/rest/ticket', (req, res) => {
     const {
