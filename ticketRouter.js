@@ -9,11 +9,13 @@ const { parseString } = require('xml2js');
 const js2xmlparser = require('js2xmlparser');
 const xml2js = require("xml2js");
 router.use(xmlparser());
+const uri = "mongodb+srv://vk:BHaytd9zn9rM8uyA@vasylko.dt7prls.mongodb.net/?retryWrites=true&w=majority";
 // Read the tickets data from the file on startup
 const ticketfile = './ticket.json';
 let tickets = [];
-
-function getLastTicketId() {
+const client = new MongoClient(uri);
+//func to get id be consistent if work with json ticket file
+/*function getLastTicketId() {
     if (tickets.length > 0) {
         const lastTicket = tickets[tickets.length - 1];
         const lastId = parseInt(lastTicket.id, 10);
@@ -21,7 +23,9 @@ function getLastTicketId() {
     }
 
     return 0;
-}
+}*/
+
+
 class TicketAdapter {
     constructor(data) {
         this.data = data;
@@ -42,13 +46,14 @@ class TicketAdapter {
         }
     }
 }
-fs.readFile(ticketfile, 'utf8', (err, data) => {
+//if read from file
+/*fs.readFile(ticketfile, 'utf8', (err, data) => {
     if (err) {
         console.error(err);
     } else {
         tickets = JSON.parse(data);
     }
-});
+});*/
 
 // Middleware
 router.use(bodyParser.json());
@@ -57,27 +62,65 @@ router.use(express.static('./'));
 
 // Default endpoint
 router.get('/', async(req, res) => {
-    res.send(tickets);
+  //  res.send(tickets);
+    try {
+        await client.connect();
+        const db = client.db('ckmdb');
+        const collection = db.collection('cmps415');
+        const tickets = await collection.find({}).toArray();
+        res.send(tickets);
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Server Error');
+    } finally {
+        await client.close();
+    }
 });
-
 // Endpoint to get all tickets
-router.get('/rest/list', (req, res) => {
-   res.send(tickets);
-
-
+router.get('/rest/list', async(req, res) => {
+ //  res.send(tickets);
+    try {
+        await client.connect();
+        const db = client.db('ckmdb');
+        const collection = db.collection('cmps415');
+        const tickets = await collection.find({}).toArray();
+        res.send(tickets);
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Server Error');
+    } finally {
+        await client.close();
+    }
 });
 // Endpoint to get a single ticket by id
-router.get('/rest/ticket/:id', (req, res) => {
+router.get('/rest/ticket/:id', async(req, res) => {
     const id = req.params.id;
-
-    const ticket = tickets.find((t) => t.id === id);
+//commented code works with file
+   /* const ticket = tickets.find((t) => t.id === id);
 
     if (!ticket) {
         res.status(404).send('Ticket not found');
     } else {
         res.send(ticket);
+    }*/
+    try {
+        await client.connect();
+        const db = client.db('ckmdb');
+        const collection = db.collection('cmps415');
+        const ticket = await collection.findOne({id});
+        if (!ticket) {
+            res.status(404).send('Ticket not found');
+        } else {
+            res.send(ticket);
+        }
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Server Error');
+    } finally {
+        await client.close();
     }
 });
+//get xml ticket
 router.get('/rest/xml/ticket/:id', async (req, res) => {
     const id = req.params.id;
 
@@ -93,9 +136,9 @@ router.get('/rest/xml/ticket/:id', async (req, res) => {
         res.status(500).send('Error retrieving ticket');
     }
 });
-//Endpoint to update ticket json
-router.put('/rest/ticket/:id', (req, res) => {
-const id = req.params.id;
+// Endpoint to update an existing ticket
+router.put('/rest/ticket/:id', async (req, res) => {
+    const id = req.params.id;
     const {
         type,
         subject,
@@ -106,46 +149,40 @@ const id = req.params.id;
         created_at,
     } = req.body;
 
-    const ticketIndex = tickets.findIndex((t) => t.id === id);
+    //const client = new MongoClient(url);
+    try {
+        await client.connect();
+        const db = client.db('ckmdb');
+        const collection = db.collection('cmps415');
 
-    if (ticketIndex === -1) {
-        res.status(404).send('Ticket not found');
-    } else if (
-        !type ||
-        !subject ||
-        !description ||
-        !priority ||
-        !status ||
-        !creator ||
-        !created_at
-    ) {
-        res.status(400).send('Incomplete ticket info');
-    } else {
-        const updatedTicket = {
-            id,
-            type,
-            subject,
-            description,
-            priority,
-            status,
-            creator,
-            created_at,
+        const filter = { id: id };
+        const update = {
+            $set: {
+                type,
+                subject,
+                description,
+                priority,
+                status,
+                creator,
+                created_at,
+            },
         };
 
-        tickets[ticketIndex] = updatedTicket;
+        const result = await collection.findOneAndUpdate(filter, update);
 
-        // Write the updated tickets data to the file
-        fs.writeFile(ticketfile, JSON.stringify(tickets), 'utf8', (err) => {
-            if (err) {
-                console.error(err);
-                res.status(500).send('Error writing to file');
-            } else {
-                res.send(updatedTicket);
-            }
-        });
+        if (!result.value) {
+            res.status(404).send('Ticket not found');
+        } else {
+            res.send(result.value);
+        }
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Error updating ticket');
+    } finally {
+        client.close();
     }
-
-})// Endpoint to add a single ticket sent as an XML document
+});
+//update a single ticket sent as an XML document
 router.put('/rest/xml/ticket/:id', (req, res) => {
     const id = req.params.id;
     const xmlData = req.body;
@@ -179,7 +216,7 @@ router.put('/rest/xml/ticket/:id', (req, res) => {
 });
 
 // Endpoint to create a new ticket
-router.post('/rest/ticket', (req, res) => {
+router.post('/rest/ticket', async(req, res) => {
     const {
         type,
         subject,
@@ -193,9 +230,12 @@ router.post('/rest/ticket', (req, res) => {
     if (!type || !subject || !description || !priority || !status || !creator || !created_at ) {
         res.status(400).send('Incomplete ticket info');
     } else {
-        const lastId = getLastTicketId();
+       // const lastId = getLastTicketId();
+        const randomNumber = Math.floor(Math.random() * 100) + 1;
+        const newId = randomNumber + 1;
         const newTicket = {
-            id: lastId.toString(),
+           // id: lastId.toString(),
+            id:newId.toString(),
             type,
             subject,
             description,
@@ -204,7 +244,12 @@ router.post('/rest/ticket', (req, res) => {
             creator,
             created_at,
         };
-        tickets.push(newTicket);
+        await client.connect();
+        const db = client.db('ckmdb');
+        const collection = db.collection('cmps415');
+        const result = await collection.insertOne(newTicket);
+
+       /* tickets.push(newTicket);
 
         // Write the updated tickets data to the file
         fs.writeFile(ticketfile, JSON.stringify(tickets), 'utf8', (err) => {
@@ -216,11 +261,22 @@ router.post('/rest/ticket', (req, res) => {
                 res.send(newTicket);
             }
         });
-    }
+    }*/}
 });
 // Endpoint to delete a ticket by id
-router.delete('/rest/ticket/:id', (req, res) => {
+router.delete('/rest/ticket/:id', async(req, res) => {
     const id = req.params.id;
+    await client.connect();
+    const db = client.db('ckmdb');
+    const ticketCollection = db.collection('cmps415');
+    const result = await ticketCollection.deleteOne({ id: id});
+
+    if (result.deletedCount === 0) {
+        res.status(404).send('Ticket not found');
+    } else {
+        res.send('Ticket deleted');
+    }
+   /* const id = req.params.id;
     const ticketIndex = tickets.findIndex((t) => t.id === id);
 
     if (ticketIndex === -1) {
@@ -237,7 +293,7 @@ router.delete('/rest/ticket/:id', (req, res) => {
                 res.send('Ticket deleted');
             }
         });
-    }
+    }*/
 });
 // Error handling middleware for bad requests
 router.use((err, req, res, next) => {
