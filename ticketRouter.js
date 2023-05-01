@@ -66,11 +66,8 @@ router.get('/rest/list', (req, res) => {
 
 
 });
-
-
 // Endpoint to get a single ticket by id
 router.get('/rest/ticket/:id', (req, res) => {
-   // const client = new MongoClient(uri);
     const id = req.params.id;
 
     const ticket = tickets.find((t) => t.id === id);
@@ -163,7 +160,7 @@ router.put('/rest/xml/ticket/:id', (req, res) => {
     // Make PUT request using request library
     const options = {
         method: 'PUT',
-        url: `http://localhost:3000/rest/ticket/${id}`,
+        url: `https://kuservice.onrender.com/rest/ticket/${id}`,
         headers: { 'Content-Type': 'application/json' },
         body: jsonData,
     };
